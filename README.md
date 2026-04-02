@@ -12,10 +12,10 @@
 
 <div align="center">
 
-![Next.js](https://img.shields.io/badge/Next.js-16.1.1-000?logo=nextdotjs)
-![React](https://img.shields.io/badge/React-19.2.3-61dafb?logo=react)
-![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1.18-38bdf8?logo=tailwindcss)
-![ArtPlayer](https://img.shields.io/badge/ArtPlayer-5.3.0-ff6b6b)
+![Next.js](https://img.shields.io/badge/Next.js-16.2.1-000?logo=nextdotjs)
+![React](https://img.shields.io/badge/React-19.2.4-61dafb?logo=react)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.2.2-38bdf8?logo=tailwindcss)
+![ArtPlayer](https://img.shields.io/badge/ArtPlayer-5.4.0-ff6b6b)
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
@@ -26,6 +26,7 @@
 
 ## 特性
 
+- 🔒 **密码登录** - 支持密码登录
 - 🎬 **多源视频搜索** - 支持自定义多个视频源 API，聚合搜索电影和电视剧
 - 🎬 **预测速** - 支持自定义多个视频源 API，聚合搜索电影和电视剧
 - 🎥 **高级播放器** - 基于 Artplayer，支持 HLS/M3U8 流媒体播放
@@ -41,6 +42,7 @@
 - ⌨️ **快捷键支持** - 丰富的键盘快捷键，提升观看体验
 - 🔔 **首页剧集更新提醒** - 首页继续观看区域展示剧集更新提醒
 - 🔗 **直链播放** - 支持直链播放(尝试使用openlist的链接播放高清视频)，支持 FLV、TS、MP4 等多种格式
+- 🔗 **视频源探索** - 直接探索视频源内容
 
 ---
 
@@ -68,15 +70,15 @@
 
 ### 核心框架
 
-- **Next.js** 16.1.1 - React 服务端渲染框架
-- **React** 19.2.3 - 用户界面构建库
+- **Next.js** 16.2.1 - React 服务端渲染框架
+- **React** 19.2.4 - 用户界面构建库
 - **Tailwind CSS** 4.1.18 - 现代化 CSS 框架
 
 ### 播放器相关
 
-- **Artplayer** 5.3.0 - 功能丰富的 HTML5 视频播放器
+- **Artplayer** 5.4.0 - 功能丰富的 HTML5 视频播放器
 - **HLS.js** 1.6.15 - HTTP Live Streaming 支持
-- **artplayer-plugin-danmuku** 5.2.0 - 弹幕插件
+- **artplayer-plugin-danmuku** 5.3.0 - 弹幕插件
 
 ### 状态管理
 
@@ -100,6 +102,10 @@ cd NextTV
 
 # 安装依赖
 bun install
+
+# 创建.env.local文件并写入以下内容
+SESSION_SECRET=<your secret>
+PASSWORD=<your password>
 
 # 启动开发服务器
 bun dev
@@ -258,15 +264,21 @@ bun run build
 
 ## 部署方案
 
-### 1. 使用 Vercel 部署
+### 1. 使用 Vercel 部署（推荐）
 
 Fork 项目后，点击 Vercel 按钮即可部署。
+需要设置`SESSION_SECRET`和`PASSWORD`环境变量。
+你可以使用[该网站](https://randomkeygen.com/secret-key)生成`SESSION_SECRET`。
+密码按照你需要设置的设置即可
 
 ### 2. 使用 EdgeOne 部署
 
-Fork 项目后，进入 EdgeOne pages 即可部署。
+添加密码登录功能后不兼容了，无法使用了
 
 ### 3. 其他支持 Next.js 的云函数都可以尝试
+需要设置`SESSION_SECRET`和`PASSWORD`环境变量。
+你可以使用[该网站](https://randomkeygen.com/secret-key)生成`SESSION_SECRET`。
+密码按照你需要设置的设置即可
 
 ## 许可证
 

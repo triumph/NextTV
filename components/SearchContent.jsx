@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { MovieCard } from "@/components/MovieCard";
 import { SkeletonCard } from "@/components/SkeletonCard";
 import { SearchBox } from "@/components/SearchBox";
+import { Pagination } from "@/components/Pagination";
 import { useSettingsStore } from "@/store/useSettingsStore";
+import { useSearchScrollStore } from "@/store/useSearchScrollStore";
 import { searchVideos } from "@/lib/cmsApi";
 import {
   MaterialSymbolsSearchRounded,
@@ -13,8 +15,6 @@ import {
   MaterialSymbolsMovieOutlineRounded,
   MaterialSymbolsTvOutlineRounded,
   MaterialSymbolsSmartphoneOutline,
-  MaterialSymbolsChevronLeftRounded,
-  MaterialSymbolsChevronRightRounded,
 } from "@/components/icons";
 
 export default function SearchContent() {
@@ -26,9 +26,27 @@ export default function SearchContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [mediaType, setMediaType] = useState("all"); // 'all', 'movie', 'tv'
-  const [sourceFilter, setSourceFilter] = useState("all"); // 视频源筛选
   const [pageCount, setPageCount] = useState(1);
   const videoSources = useSettingsStore((state) => state.videoSources);
+  const saveScrollPosition = useSearchScrollStore((state) => state.saveScrollPosition);
+  const restoreScrollPosition = useSearchScrollStore((state) => state.restoreScrollPosition);
+  const clearScrollPosition = useSearchScrollStore((state) => state.clearScrollPosition);
+
+  // 使用 ref 保存 restoreScrollPosition，避免作为 useEffect 依赖
+  const restoreScrollPositionRef = useRef(restoreScrollPosition);
+  restoreScrollPositionRef.current = restoreScrollPosition;
+
+  // 只显示已激活的源
+  const enabledSources = videoSources.filter((s) => s.enabled);
+  // 稳定的依赖值，避免 Zustand hydration 引用变化触发重复请求
+  const enabledSourceKeys = enabledSources.map((s) => s.key).join(",");
+  const videoSourcesRef = useRef(videoSources);
+  videoSourcesRef.current = videoSources;
+  // 从 URL 参数读取源过滤，默认为第一个激活源
+  const sourceParam = searchParams.get("source");
+  const sourceFilter = sourceParam && enabledSources.some((s) => s.key === sourceParam)
+    ? sourceParam
+    : enabledSources.length > 0 ? enabledSources[0].key : "";
 
   const handlePageChange = useCallback(
     (page) => {
@@ -38,11 +56,41 @@ export default function SearchContent() {
       } else {
         params.set("page", String(page));
       }
+      clearScrollPosition();
       router.push(`/search?${params.toString()}`);
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
-    [searchParams, router],
+    [searchParams, router, clearScrollPosition],
   );
+
+  const handleSourceChange = useCallback(
+    (sourceKey) => {
+      const params = new URLSearchParams(searchParams);
+      params.set("source", sourceKey);
+      params.delete("page");
+      clearScrollPosition();
+      router.push(`/search?${params.toString()}`);
+    },
+    [searchParams, router, clearScrollPosition],
+  );
+
+  // 持续监听滚动事件，保存滚动位置（防抖）
+  // 不能只在 unmount 时保存，因为 Next.js 页面切换时 window.scrollY 可能已被重置为 0
+  useEffect(() => {
+    let timer;
+    const handleScroll = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        saveScrollPosition();
+      }, 150);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [saveScrollPosition]);
 
   // 执行搜索
   useEffect(() => {
@@ -57,13 +105,21 @@ export default function SearchContent() {
       setError(null);
 
       try {
-        const searchData = await searchVideos(query, videoSources, currentPage);
+        const searchData = await searchVideos(query, videoSourcesRef.current, currentPage);
         setResults(searchData.results);
         setPageCount(searchData.pageCount);
 
         if (searchData.results.length === 0) {
           setError("未找到相关结果，请尝试其他关键词");
         }
+
+        // 数据加载完成后恢复滚动位置
+        requestAnimationFrame(() => {
+          const savedY = restoreScrollPositionRef.current();
+          if (savedY > 0) {
+            window.scrollTo(0, savedY);
+          }
+        });
       } catch (err) {
         console.error("搜索错误:", err);
         setError("搜索失败，请稍后重试");
@@ -75,7 +131,7 @@ export default function SearchContent() {
     }
 
     performSearch();
-  }, [query, videoSources, currentPage]);
+  }, [query, enabledSourceKeys, currentPage]);
 
   // 根据媒体类型和视频源过滤结果
   const filteredResults = results.filter((result) => {
@@ -90,10 +146,7 @@ export default function SearchContent() {
     }
 
     // 视频源筛选
-    let matchSource = true;
-    if (sourceFilter !== "all") {
-      matchSource = result.source === sourceFilter;
-    }
+    const matchSource = sourceFilter ? result.source === sourceFilter : true;
 
     return matchMediaType && matchSource;
   });
@@ -122,7 +175,7 @@ export default function SearchContent() {
     if (query && results.length > 0) {
       return (
         <>
-          <div className="flex items-baseline justify-between mb-6">
+          <div className="mb-6">
             <h2 className="text-xl text-gray-500 font-medium">
               找到 {filteredResults.length} 个关于{" "}
               <span className="text-gray-900 font-bold text-2xl mx-1">
@@ -130,21 +183,6 @@ export default function SearchContent() {
               </span>{" "}
               的结果
             </h2>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>视频源：</span>
-              <select
-                className="bg-transparent border-none text-gray-900 font-medium focus:ring-0 cursor-pointer py-0 pr-8 pl-0"
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value)}
-              >
-                <option value="all">全部</option>
-                {videoSources.map((source) => (
-                  <option key={source.key} value={source.key}>
-                    {source.name}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
@@ -246,97 +284,31 @@ export default function SearchContent() {
         </div>
       </div>
 
+      {/* 视频源标签过滤 */}
+      {query && enabledSources.length > 0 && (
+        <div className="w-full overflow-hidden relative">
+          <div className="flex gap-3 overflow-x-auto hide-scrollbar py-2 px-1">
+            {enabledSources.map((source) => (
+              <button
+                key={source.key}
+                onClick={() => handleSourceChange(source.key)}
+                className={`shrink-0 px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all cursor-pointer btn-press ${
+                  source.key === sourceFilter
+                    ? "bg-primary/10 border border-primary text-primary font-semibold hover:bg-primary hover:text-white"
+                    : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                {source.name}
+              </button>
+            ))}
+          </div>
+          <div className="absolute right-0 top-0 bottom-0 w-24 bg-linear-to-l from-background-light to-transparent pointer-events-none"></div>
+        </div>
+      )}
+
       <div>{renderContent()}</div>
     </div>
   );
 }
 
-function Pagination({ currentPage, pageCount, onPageChange }) {
-  // 计算要显示的页码范围，最多显示 5 个页码按钮
-  function getPageNumbers() {
-    const maxVisible = 5;
-    if (pageCount <= maxVisible) {
-      return Array.from({ length: pageCount }, (_, i) => i + 1);
-    }
 
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let end = start + maxVisible - 1;
-
-    if (end > pageCount) {
-      end = pageCount;
-      start = end - maxVisible + 1;
-    }
-
-    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-  }
-
-  const pages = getPageNumbers();
-
-  return (
-    <div className="flex items-center justify-center gap-1.5 mt-8 mb-4">
-      <button
-        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        disabled={currentPage === 1}
-        onClick={() => onPageChange(currentPage - 1)}
-        aria-label="上一页"
-      >
-        <MaterialSymbolsChevronLeftRounded className="text-xl" />
-      </button>
-
-      {pages[0] > 1 && (
-        <>
-          <button
-            className="min-w-[36px] h-9 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
-            onClick={() => onPageChange(1)}
-          >
-            1
-          </button>
-          {pages[0] > 2 && (
-            <span className="min-w-[36px] h-9 flex items-center justify-center text-sm text-gray-400">
-              ...
-            </span>
-          )}
-        </>
-      )}
-
-      {pages.map((page) => (
-        <button
-          key={page}
-          className={`min-w-[36px] h-9 rounded-lg text-sm font-medium transition-colors ${
-            page === currentPage
-              ? "bg-primary text-white shadow-sm"
-              : "text-gray-600 hover:bg-gray-100"
-          }`}
-          onClick={() => onPageChange(page)}
-        >
-          {page}
-        </button>
-      ))}
-
-      {pages[pages.length - 1] < pageCount && (
-        <>
-          {pages[pages.length - 1] < pageCount - 1 && (
-            <span className="min-w-[36px] h-9 flex items-center justify-center text-sm text-gray-400">
-              ...
-            </span>
-          )}
-          <button
-            className="min-w-[36px] h-9 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
-            onClick={() => onPageChange(pageCount)}
-          >
-            {pageCount}
-          </button>
-        </>
-      )}
-
-      <button
-        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        disabled={currentPage === pageCount}
-        onClick={() => onPageChange(currentPage + 1)}
-        aria-label="下一页"
-      >
-        <MaterialSymbolsChevronRightRounded className="text-xl" />
-      </button>
-    </div>
-  );
-}

@@ -7,11 +7,11 @@ import { useVideoData } from "@/hooks/useVideoData";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { EpisodeList } from "@/components/EpisodeList";
+import { DanmakuSearchModal } from "@/components/DanmakuSearchModal";
 import { LoadingSpinner } from "@/components/PlayerPageLoading";
 import Image from "next/image";
 import {
   MaterialSymbolsHomeOutlineRounded,
-  MaterialSymbolsShareOutline,
   MaterialSymbolsMovieOutlineRounded,
   MaterialSymbolsPublic,
   MaterialSymbolsStarOutlineRounded,
@@ -27,7 +27,9 @@ export default function PlayerPage() {
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(0);
   const [episodesCollapsed, setEpisodesCollapsed] = useState(false);
   const [fixedPlayerHeight, setFixedPlayerHeight] = useState(null);
+  const [showDanmakuModal, setShowDanmakuModal] = useState(false);
   const playerWrapperRef = useRef(null);
+  const loadManualDanmakuRef = useRef(null);
   const { videoDetail, doubanActors, loading, error } = useVideoData(id, source, setCurrentEpisodeIndex);
 
   const handleCollapse = useCallback(() => {
@@ -46,6 +48,18 @@ export default function PlayerPage() {
     setCurrentEpisodeIndex(index);
   };
 
+  const handleDanmakuEpisodeConfirm = useCallback((episodeId) => {
+    loadManualDanmakuRef.current?.(episodeId);
+  }, []);
+
+  const handleOpenDanmakuModal = useCallback(() => {
+    setShowDanmakuModal(true);
+  }, []);
+
+  const handleCloseDanmakuModal = useCallback(() => {
+    setShowDanmakuModal(false);
+  }, []);
+
   if (error) {
     return (
       <div className="w-full max-w-7xl pt-4 flex items-center justify-center min-h-screen">
@@ -60,6 +74,7 @@ export default function PlayerPage() {
   if (loading || !videoDetail) {
     return <LoadingSpinner />;
   }
+
 
   return (
     <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
@@ -79,7 +94,13 @@ export default function PlayerPage() {
         {/* Left Column: Player and Info */}
         <div className={`flex flex-col gap-4 transition-all duration-300 ${episodesCollapsed ? "lg:col-span-12" : "lg:col-span-8 xl:col-span-9"}`}>
           <div ref={playerWrapperRef} className={`relative ${episodesCollapsed ? "" : "aspect-video"}`} style={episodesCollapsed && fixedPlayerHeight ? { height: fixedPlayerHeight } : undefined}>
-            <VideoPlayer key={id} videoDetail={videoDetail} currentEpisodeIndex={currentEpisodeIndex} setCurrentEpisodeIndex={setCurrentEpisodeIndex} />
+            <VideoPlayer
+              key={id}
+              videoDetail={videoDetail}
+              currentEpisodeIndex={currentEpisodeIndex}
+              setCurrentEpisodeIndex={setCurrentEpisodeIndex}
+              loadManualDanmakuRef={loadManualDanmakuRef}
+            />
             {episodesCollapsed && (
               <button
                 className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-black/50 hover:bg-black/70 text-white/80 hover:text-white text-xs font-medium backdrop-blur-sm transition-all cursor-pointer"
@@ -94,9 +115,9 @@ export default function PlayerPage() {
 
           {/* Mobile Actions Bar (Visible only on mobile/tablet) */}
           <div className="flex lg:hidden justify-between items-center px-2 py-3 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-800">
-            <div className="flex gap-4">
+            <div className="flex gap-3 items-center">
               <FavoriteButton source={source} id={id} videoDetail={videoDetail} className="flex flex-col items-center gap-1 text-xs text-slate-500 hover:text-primary" />
-              {/* Keep only requested items: Favorite, Share, Source Name (shown below) */}
+              <button className="danmaku-trigger-btn" onClick={handleOpenDanmakuModal} title="手动搜索弹幕">弹</button>
             </div>
             <div className="flex items-center gap-2">
               <div className="text-sm font-medium text-slate-900 dark:text-white truncate max-w-[150px]">{videoDetail.title}</div>
@@ -117,7 +138,7 @@ export default function PlayerPage() {
         </div>
       </div>
 
-      {/* Bottom Section: Full Info Card (Hidden on Mobile as per request "mobile details only ...", keeping desktop rich) */}
+      {/* Bottom Section: Full Info Card (Hidden on Mobile) */}
       <div className="hidden lg:block bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-800 overflow-hidden">
         <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8">
           <div className="w-full md:w-56 shrink-0 mx-auto md:mx-0 max-w-[240px]">
@@ -138,7 +159,10 @@ export default function PlayerPage() {
           <div className="flex-1 space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-gray-100 dark:border-slate-700 pb-4">
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2">{videoDetail.title}</h1>
+                <div className="flex items-center gap-2 mb-2">
+                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{videoDetail.title}</h1>
+                  <button className="danmaku-trigger-btn" onClick={handleOpenDanmakuModal} title="手动搜索弹幕">弹</button>
+                </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
                   <span className="bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded text-xs font-medium text-slate-600 dark:text-slate-300">{videoDetail.year}</span>
                   <span className="flex items-center gap-1">
@@ -221,6 +245,14 @@ export default function PlayerPage() {
           </div>
         </div>
       </div>
+
+      {/* Danmaku Search Modal */}
+      <DanmakuSearchModal
+        isOpen={showDanmakuModal}
+        onClose={handleCloseDanmakuModal}
+        initialTitle={videoDetail.title}
+        onEpisodeConfirm={handleDanmakuEpisodeConfirm}
+      />
     </div>
   );
 }

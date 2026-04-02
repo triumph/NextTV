@@ -144,7 +144,7 @@ export function DanmakuSearch({ initialTitle, onEpisodeSelect, onAnimeSelect, on
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="输入剧名搜索弹幕..."
-            className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+            className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
           />
           <button
             onClick={handleSearch}
@@ -232,14 +232,14 @@ export function DanmakuSearch({ initialTitle, onEpisodeSelect, onAnimeSelect, on
               <MaterialSymbolsArrowBackRounded className="text-[14px]" />
               返回搜索结果
             </button>
-            <div className="grid grid-cols-5 gap-3 content-start">
+            <div className="flex flex-wrap gap-2 content-start">
               {episodes.map((ep) => {
                 const isCurrent = ep.episodeId === selectedEpisodeId;
                 const displayNumber = String(ep.episodeNumber || "?").padStart(2, "0");
                 return (
                   <div key={ep.episodeId} className="relative group/episode">
                     <button
-                      className={`w-full aspect-square rounded-lg flex items-center justify-center font-medium transition-all duration-200 text-sm cursor-pointer
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center font-medium transition-all duration-200 text-xs cursor-pointer shrink-0
                         ${isCurrent
                           ? "bg-primary text-white font-bold transform scale-105"
                           : "text-slate-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 hover:bg-white hover:border-primary hover:text-primary dark:hover:bg-slate-700 dark:hover:border-primary dark:hover:text-primary"
@@ -248,7 +248,7 @@ export function DanmakuSearch({ initialTitle, onEpisodeSelect, onAnimeSelect, on
                       onClick={() => handleEpisodeClick(ep)}
                     >
                       {displayNumber}
-                      {isCurrent && <span className="absolute top-0 right-0 -mt-1 -mr-1 flex size-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span><span className="relative inline-flex size-3 rounded-full bg-sky-500"></span></span>}
+                      {isCurrent && <span className="absolute top-0 right-0 -mt-1 -mr-1 flex size-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span><span className="relative inline-flex size-2.5 rounded-full bg-sky-500"></span></span>}
                     </button>
                     <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-slate-900 text-white text-xs rounded whitespace-nowrap opacity-0 invisible group-hover/episode:opacity-100 group-hover/episode:visible transition-all duration-200 pointer-events-none z-50">
                       {ep.episodeTitle}

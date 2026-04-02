@@ -655,5 +655,5 @@ export function usePlayer({
     };
   }, []);
 
-  return { artRef };
+  return { artRef, artPlayerRef };
 }

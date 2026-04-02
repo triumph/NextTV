@@ -1,6 +1,4 @@
-import "./globals.css";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
+import "../globals.css";
 import { Inter } from "next/font/google";
 
 const inter = Inter({
@@ -9,16 +7,20 @@ const inter = Inter({
   fallback: [
     "-apple-system",
     "BlinkMacSystemFont",
-    "PingFang SC",
-    "Microsoft YaHei",
-    "Heiti SC",
+    "Segoe UI",
+    "Segoe UI Midlevel",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
     "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
   ],
 });
 
 export const metadata = {
   title: "NextTV - 影视无限",
-  description: "NextTV 影视播放平台",
+  description: "请输入密码以访问 NextTV",
 };
 
 export default function RootLayout({ children }) {
@@ -29,11 +31,9 @@ export default function RootLayout({ children }) {
       data-scroll-behavior="smooth"
     >
       <body className="bg-background-light text-gray-900 min-h-screen flex flex-col selection:bg-primary selection:text-white">
-        <Navbar />
         <main className="flex-1 flex flex-col items-center w-full px-4 md:px-8 pb-12">
           {children}
         </main>
-        <Footer />
       </body>
     </html>
   );
